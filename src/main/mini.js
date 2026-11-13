@@ -7,10 +7,10 @@ const { toUrl } = require('./util');
 const BAR = 38;
 const minis = new Set();
 
-function openMini(browser, url) {
+function openMini(browser, url, size = {}) {
   const win = new BaseWindow({
-    width: 980,
-    height: 720,
+    width: size.width || 980,
+    height: size.height ? size.height + BAR : 720,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 12, y: 12 },
     vibrancy: 'sidebar',
@@ -65,7 +65,9 @@ function openMini(browser, url) {
     },
   };
   minis.add(mini);
+  if (browser.extensions) browser.extensions.addTab(wc, win);
   win.on('closed', () => {
+    if (browser.extensions && !wc.isDestroyed()) browser.extensions.removeTab(wc);
     minis.delete(mini);
     if (!wc.isDestroyed()) wc.close();
     if (!bar.webContents.isDestroyed()) bar.webContents.close();

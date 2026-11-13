@@ -7,6 +7,7 @@ const { makeTools } = require('./tools');
 const { ClaudeAgent } = require('./claude');
 const { ControlServer } = require('./control-server');
 const { openMini, miniFor } = require('./mini');
+const { Extensions } = require('./extensions');
 const { score, summarizeUsage } = require('./util');
 const pkg = require('../../package.json');
 
@@ -42,7 +43,8 @@ app.on('second-instance', (_e, argv) => {
 
 app.whenReady().then(async () => {
   const adblock = new AdBlock(app.getPath('userData'));
-  browser = new Browser({ store, adblock });
+  const extensions = new Extensions(() => browser);
+  browser = new Browser({ store, adblock, extensions });
   tools = makeTools(browser, { status: () => ({ control: control?.info() && { local: control.info().local, tunnel: control.info().tunnel } }) });
   agent = new ClaudeAgent({ browser, store, tools, send: (ev) => browser.sendUI('claude:event', ev) });
   control = new ControlServer({ browser, store, tools, version: pkg.version });
@@ -219,6 +221,13 @@ ipcMain.handle('act', async (_e, action, p = {}) => {
       }
       control.stopTunnel();
       return control.info();
+    // Chrome extensions
+    case 'ext.list': return b.extensions.list();
+    case 'ext.install': return b.extensions.installById(p.input);
+    case 'ext.remove': return b.extensions.remove(p.id);
+    case 'ext.loadUnpacked': return b.extensions.loadUnpackedFromDialog();
+    case 'ext.options': return b.extensions.openOptions(p.id);
+    case 'ext.store': return b.createTab({ url: 'https://chromewebstore.google.com/' }).id;
     case 'mini.open': return void openMini(b, p.url);
     case 'openExternal': return shell.openExternal(p.url);
     case 'relaunch':
@@ -315,6 +324,7 @@ function buildMenu() {
         { label: 'Close Split View', accelerator: 'Ctrl+Shift+-', click: () => b.closeSplit() },
         { label: 'Picture in Picture', accelerator: 'CmdOrCtrl+Shift+P', click: () => b.pip() },
         { label: 'Boost this Site…', accelerator: 'CmdOrCtrl+Shift+B', click: cmd('boost') },
+        { label: 'Extensions…', click: cmd('extensions') },
         { type: 'separator' },
         { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: () => b.wcOf(b.activeTabId())?.reload() },
         { label: 'Hard Reload', accelerator: 'CmdOrCtrl+Shift+R', click: () => b.wcOf(b.activeTabId())?.reloadIgnoringCache() },

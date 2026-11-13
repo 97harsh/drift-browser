@@ -34,6 +34,20 @@ Use a throwaway profile with `DRIFT_USER_DATA=/tmp/drift-dev npm start`. Run the
 ### Ad blocking
 The Ghostery engine runs the EasyList, EasyPrivacy, uBlock Origin and Fanboy annoyance lists, with cosmetic filtering and YouTube scriptlets. There are three levels: ads; ads + trackers; ads + trackers + annoyances (cookie banners). Shield counts show per page in the URL pill and per session in the footer.
 
+### Chrome extensions
+Open the **Chrome Web Store** inside Drift and click **Add to Chrome**, just like in Chrome. You can also go to Settings → Extensions to paste a store link or ID, or to load an unpacked folder.
+- Extension buttons and popups appear under the address bar.
+- Extensions are shared across all spaces and profiles, auto-update every 5 hours, and add their items to the right-click menu.
+- Each install asks you to confirm and shows the requested permissions.
+
+Why this needed work even though Drift is Chromium: Electron includes Chromium's engine but not Chrome's browser layer. That layer is what provides Web Store installs, `chrome.tabs`, toolbar actions, popups and context menus. Drift adds them with [`electron-chrome-extensions`](https://github.com/samuelmaddock/electron-browser-shell) and `electron-chrome-web-store` (both MIT), plus its own shims for gaps such as `chrome.fontSettings`.
+
+**Compatibility** (`npm run test:extensions` checks the core path):
+- ✅ Content scripts, service-worker messaging, `chrome.tabs`, `chrome.storage`, action icons and badges, popups, context menus.
+- ✅ **JSON Formatter**, installed from the Web Store, works fully.
+- ⚠️ **Dark Reader** installs and its worker runs, but it doesn't restyle pages yet.
+- ⚠️ Extensions that depend on `declarativeNetRequest` or other APIs Electron lacks may only partly work. Drift's built-in ad blocker covers the uBlock use case.
+
 ### Picture-in-picture
 Use ⇧⌘P, right-click a video, or the media card in the sidebar. **Auto-PiP** pops a playing video out when you switch tabs.
 
@@ -91,6 +105,7 @@ src/main/
   control-server.js  REST + MCP server, purchase guard, Cloudflare tunnel
   adblock.js         Ghostery engine across multiple profile sessions
   mini.js            Little Drift windows
+  extensions.js      Chrome Web Store installs + chrome.* APIs per profile session
   store.js / util.js persistence, URL parsing, pricing
 src/ui/              sidebar, command bar, Claude panel, settings and library (vanilla JS)
 src/preload/         context-isolated bridges
@@ -100,7 +115,7 @@ Each tab is a `WebContentsView` inside a `BaseWindow`. The chrome UI is one tran
 
 ## Roadmap
 - Folders in pinned tabs; Notes/Easels; AI tab tidy and auto-rename
-- Chrome extension support (`session.loadExtension`), password-manager integration
+- Broader Chrome extension API coverage (Dark Reader page styling, `declarativeNetRequest`); password-manager integration
 - Signed, notarized `.app` with a default-browser prompt (`npm run dist` builds an unsigned one)
 - Persist split view across restarts; tab groups in split (3–4 panes)
 - Sync across devices

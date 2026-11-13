@@ -7,7 +7,8 @@
     "start": "electron .",
     "dev": "electron . --inspect=5858",
     "test": "node --test test/",
-    "dist": "npx electron-builder --mac"
+    "dist": "npx electron-builder --mac",
+    "test:extensions": "electron scripts/ext-smoke.js"
   },
   "license": "UNLICENSED",
   "type": "commonjs",
@@ -16,6 +17,8 @@
     "@ghostery/adblocker-electron": "^2.20.3",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "cross-fetch": "^4.1.0",
+    "electron-chrome-extensions": "^4.10.0",
+    "electron-chrome-web-store": "^0.13.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

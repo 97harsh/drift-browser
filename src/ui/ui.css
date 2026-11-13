@@ -292,3 +292,10 @@ table.data td.num, table.data th.num { text-align: right; font-variant-numeric: 
 
 #toast { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(20px); background: var(--fg); color: var(--surface-solid); padding: 8px 14px; border-radius: 9px; opacity: 0; transition: all 0.2s; pointer-events: none; z-index: 200; font-size: 12px; }
 #toast.show { opacity: 1; transform: translateX(-50%); }
+
+/* ---------- extension toolbar ---------- */
+#ext-bar { display: flex; align-items: center; gap: 2px; flex-shrink: 0; padding: 0 2px; min-height: 28px; }
+#ext-bar browser-action-list { display: flex; flex: 1; flex-wrap: wrap; gap: 2px; }
+browser-action-list::part(action) { width: 28px; height: 28px; border-radius: 7px; background-color: transparent; background-size: 16px; }
+browser-action-list::part(action):hover { background-color: var(--hover); }
+browser-action-list::part(badge) { font-size: 9px; border-radius: 4px; }

@@ -11,9 +11,11 @@ const GAP = 6; // gap between split panes
 const MAX_LOG = 300;
 
 class Browser {
-  constructor({ store, adblock }) {
+  constructor({ store, adblock, extensions }) {
     this.store = store;
     this.adblock = adblock;
+    this.extensions = extensions;
+    if (extensions) extensions.getBrowser = () => this;
     this.views = new Map(); // tabId -> WebContentsView
     this.rt = new Map(); // tabId -> runtime state {loading, audible, playing, canGoBack, canGoForward, crashed}
     this.consoleLogs = new Map(); // webContentsId -> [{level, message, source, line, ts}]
@@ -112,6 +114,7 @@ class Browser {
     ses.setUserAgent(ses.getUserAgent().replace(/\s(Electron|drift-browser|Drift)\/\S+/g, ''));
     if (this.settings.adblock) this.adblock.enable(ses);
     else this.adblock.sessions.add(ses);
+    if (this.extensions) this.extensions.setup(ses);
 
     const logNet = (d, extra) => {
       if (d.webContentsId == null) return;
@@ -222,7 +225,12 @@ class Browser {
     this.views.set(tab.id, view);
     this.rt.set(tab.id, { loading: true });
     this.wireWebContents(tab.id, view.webContents);
-    view.webContents.loadURL(tab.url).catch(() => {});
+    const wc = view.webContents;
+    if (this.extensions) {
+      this.extensions.addTab(wc, this.win);
+      // Load the page only after the profile's extensions are loaded, so their content scripts run.
+      this.extensions.ready(wc.session).then(() => !wc.isDestroyed() && wc.loadURL(tab.url).catch(() => {}));
+    } else wc.loadURL(tab.url).catch(() => {});
     return view;
   }
 
@@ -369,6 +377,10 @@ class Browser {
       { label: 'Forward', enabled: wc.navigationHistory.canGoForward(), click: () => wc.navigationHistory.goForward() },
       { label: 'Reload', click: () => wc.reload() },
       { type: 'separator' },
+      ...(() => {
+        const ext = this.extensions ? this.extensions.contextMenuItems(wc, p) : [];
+        return ext.length ? [{ type: 'separator' }, ...ext, { type: 'separator' }] : [];
+      })(),
       { label: 'Ask Claude about this Page', click: () => this.sendUI('claude:prefill', 'Summarize this page for me.') },
       { label: 'Inspect Element', click: () => wc.inspectElement(p.x, p.y) },
     );
@@ -395,6 +407,7 @@ class Browser {
     tab.lastActive = Date.now();
     if (this.split && ![this.split.left, this.split.right].includes(tabId)) this.split = null;
     this.ensureView(tab);
+    if (this.extensions) this.extensions.selectTab(this.wcOf(tabId));
     this.layout();
     this.focusActive();
     this.store.save();
@@ -455,6 +468,7 @@ class Browser {
       this.win.contentView.removeChildView(v);
     } catch {}
     if (!v.webContents.isDestroyed()) {
+      if (this.extensions) this.extensions.removeTab(v.webContents);
       this.consoleLogs.delete(v.webContents.id);
       this.networkLogs.delete(v.webContents.id);
       v.webContents.close();
@@ -848,6 +862,9 @@ class Browser {
       spaces: s.spaces,
       activeSpaceId: s.activeSpaceId,
       activeTabId: this.activeTabId(),
+      activeWcId: this.wcOf(this.activeTabId())?.id ?? null,
+      partition: `persist:drift-${this.space().profile || 'default'}`,
+      extensionCount: this.extensions ? this.getSession(this.space().profile || 'default').extensions.getAllExtensions().length : 0,
       tabs,
       split: this.split,
       peek: pk ? { url: pk.getURL(), title: pk.getTitle() } : null,

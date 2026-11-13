@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'none'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data: blob: crx:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'none'" />
     <title>Drift</title>
     <link rel="stylesheet" href="ui.css" />
   </head>
@@ -20,6 +20,10 @@
           </div>
         </div>
         <button id="urlbar" class="no-drag" title="⌘L"><span class="lock">⌕</span><span class="text">Search or enter URL</span><span class="blocked" title="Ads & trackers blocked on this page"></span></button>
+        <div id="ext-bar" class="hidden">
+          <browser-action-list alignment="bottom right"></browser-action-list>
+          <button class="icon tiny" id="btn-extensions" title="Manage extensions">⧉</button>
+        </div>
         <div id="favorites" class="fav-grid" data-zone="favorite"></div>
         <div id="space-header">
           <span class="space-icon"></span><span class="space-name"></span>

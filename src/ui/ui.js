@@ -170,6 +170,11 @@ function render() {
   shield.classList.toggle('off', !S.settings.adblock);
   shield.title = S.settings.adblock ? `${S.adblockTotal} ads & trackers blocked (click to toggle)` : 'Ad blocker off (click to enable)';
   $('#claude-model').value = S.settings.claude.model;
+  // Extension toolbar: actions for the active space's profile and active tab.
+  $('#ext-bar').classList.toggle('hidden', !S.extensionCount);
+  const bal = $('#ext-bar browser-action-list');
+  if (bal.getAttribute('partition') !== S.partition) bal.setAttribute('partition', S.partition);
+  if (S.activeWcId != null && bal.getAttribute('tab') !== String(S.activeWcId)) bal.setAttribute('tab', String(S.activeWcId));
 
   $('#empty').classList.toggle('hidden', !!S.activeTabId);
   renderPeek();
@@ -340,6 +345,7 @@ $('#btn-addspace').onclick = () => newSpace();
 $('#btn-space-menu').onclick = (e) => spaceMenu(e, S.spaces.find((s) => s.id === S.activeSpaceId));
 $('#btn-library').onclick = () => openLibrary();
 $('#btn-settings').onclick = () => openSettings();
+$('#btn-extensions').onclick = () => openSettings('extensions');
 $('#btn-claude').onclick = () => toggleClaude();
 $('#btn-shield').onclick = () => act('adblock.set', { enabled: !S.settings.adblock }).then(() => toast(S.settings.adblock ? 'Ad blocker off' : 'Ad blocker on'));
 
@@ -414,6 +420,8 @@ const COMMANDS = () => {
     S.split && { t: 'Close Split View', k: '⌃⇧-', run: () => act('split.close') },
     { t: 'Find in Page', k: '⌘F', run: openFind },
     { t: 'Boost this Site', k: '⇧⌘B', run: () => openBoost() },
+    { t: 'Extensions', run: () => openSettings('extensions') },
+    { t: 'Chrome Web Store', run: () => act('ext.store') },
     { t: 'Library: History & Archive', k: '⌘Y', run: () => openLibrary() },
     { t: 'Claude API Usage', run: () => openLibrary('usage') },
     { t: 'Settings', k: '⌘,', run: () => openSettings() },
@@ -716,6 +724,41 @@ function openSettings(initial) {
             h('button', { class: 'secondary', onclick: () => act('relaunch') }, 'Restart now')),
             'For Playwright / Puppeteer <code>connectOverCDP</code> or chrome://inspect. Local only and unauthenticated — leave off when not debugging.'),
         );
+      },
+    },
+    {
+      key: 'extensions', title: 'Extensions',
+      render: async (b) => {
+        const list = await act('ext.list');
+        const input = h('input', { type: 'text', placeholder: 'Paste a Chrome Web Store link or extension ID', style: 'flex:1;min-width:260px' });
+        const install = async () => {
+          if (!input.value.trim()) return;
+          try {
+            const r = await act('ext.install', { input: input.value });
+            toast(`Installed ${r.name}`);
+            modal && modal.show('extensions');
+          } catch (e) {
+            toast(String(e.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''));
+          }
+        };
+        input.onkeydown = (e) => e.key === 'Enter' && install();
+        b.append(h('h2', {}, 'Extensions'),
+          h('div', { class: 'help', style: 'margin-bottom:14px;color:var(--fg-dim);line-height:1.5' },
+            'Install anything from the Chrome Web Store — open it and click “Add to Chrome” like in Chrome. Extensions are shared across all spaces and profiles, auto-update, and their buttons appear under the address bar.'),
+          h('div', { class: 'field' }, h('div', { class: 'row' },
+            h('button', { class: 'primary', onclick: () => (closeModal(), act('ext.store')) }, 'Open Chrome Web Store'),
+            h('button', { class: 'secondary', onclick: () => act('ext.loadUnpacked').then((p) => p && (toast('Loaded unpacked extension'), modal && modal.show('extensions'))).catch((e) => toast(String(e.message || e))) }, 'Load unpacked…'))),
+          field('Install by link or ID', h('div', { class: 'row' }, input, h('button', { class: 'secondary', onclick: install }, 'Install'))));
+        if (!list.length) b.append(h('div', { class: 'help' }, 'No extensions yet.'));
+        for (const x of list) {
+          b.append(h('div', { class: 'list-row', style: 'align-items:flex-start' },
+            h('img', { src: `crx://extension-icon/${x.id}/32/2?partition=${encodeURIComponent(S.partition)}`, style: 'width:24px;height:24px;margin-top:2px', onerror: (e) => (e.target.style.visibility = 'hidden') }),
+            h('div', { class: 't', style: 'white-space:normal' }, h('b', {}, x.name), ` ${x.version}`, x.unpacked ? h('span', { class: 'pill', style: 'margin-left:6px' }, 'unpacked') : null,
+              x.description ? h('div', { class: 'help', style: 'font-size:12px;color:var(--fg-dim)' }, x.description) : null,
+              h('div', { class: 'help', style: 'font-size:11px;color:var(--fg-faint)' }, x.id)),
+            x.options ? h('button', { class: 'secondary', onclick: () => (closeModal(), act('ext.options', { id: x.id })) }, 'Options') : null,
+            h('button', { class: 'danger', onclick: () => confirm(`Remove ${x.name}?`) && act('ext.remove', { id: x.id }).then(() => modal && modal.show('extensions')) }, 'Remove')));
+        }
       },
     },
     {
@@ -1055,6 +1098,7 @@ window.drift.onCommand(({ name }) => {
     case 'library': return openLibrary();
     case 'settings': return openSettings();
     case 'boost': return openBoost();
+    case 'extensions': return openSettings('extensions');
     case 'newspace': return newSpace();
     case 'claude-focus': return setTimeout(() => $('#claude-input').focus(), 30);
     case 'control-changed': return modal && modal.show('remote');

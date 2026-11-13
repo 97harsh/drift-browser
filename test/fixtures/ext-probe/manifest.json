@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Drift Probe",
+  "version": "1.0.0",
+  "description": "Test fixture: content script ↔ service worker messaging and chrome.tabs.",
+  "permissions": ["storage", "tabs"],
+  "background": { "service_worker": "sw.js" },
+  "action": { "default_title": "Drift Probe", "default_popup": "popup.html" },
+  "content_scripts": [{ "matches": ["<all_urls>"], "js": ["content.js"], "run_at": "document_idle" }]
+}
