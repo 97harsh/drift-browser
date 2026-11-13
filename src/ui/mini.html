@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <link rel="stylesheet" href="ui.css" />
+    <style>
+      html, body { background: transparent; }
+      .bar { position: fixed; inset: 0; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 80px; -webkit-app-region: drag; }
+      .bar input { flex: 1; -webkit-app-region: no-drag; border: 0; border-radius: 7px; padding: 5px 10px; background: var(--surface); outline: none; }
+      .bar input:focus { background: var(--surface-solid); }
+      .bar button { -webkit-app-region: no-drag; }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      <input id="url" placeholder="Search or enter URL" spellcheck="false" />
+      <button class="secondary" id="promote" title="Move this page into your main Drift window">Open in Drift ↗</button>
+    </div>
+    <script src="mini.js"></script>
+  </body>
+</html>

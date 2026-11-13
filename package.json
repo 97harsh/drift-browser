@@ -1,0 +1,47 @@
+{
+  "name": "drift-browser",
+  "version": "0.1.0",
+  "description": "A sidebar-first, Claude-native browser in the spirit of Arc",
+  "main": "src/main/index.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --inspect=5858",
+    "test": "node --test test/",
+    "dist": "npx electron-builder --mac"
+  },
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@ghostery/adblocker-electron": "^2.20.3",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "cross-fetch": "^4.1.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "electron": "^45.3.2"
+  },
+  "productName": "Drift",
+  "private": true,
+  "build": {
+    "appId": "dev.drift.browser",
+    "productName": "Drift",
+    "files": [
+      "src/**",
+      "package.json",
+      "node_modules/**"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "protocols": [
+      {
+        "name": "Web",
+        "schemes": [
+          "http",
+          "https"
+        ]
+      }
+    ]
+  }
+}

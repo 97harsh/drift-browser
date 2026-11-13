@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'none'" />
+    <title>Drift</title>
+    <link rel="stylesheet" href="ui.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="bg"></div>
+      <aside id="sidebar">
+        <div class="topbar drag">
+          <div class="traffic-space"></div>
+          <div class="nav no-drag">
+            <button class="icon" id="btn-sidebar" title="Toggle sidebar (⌘S)">⇤</button>
+            <button class="icon" id="btn-back" title="Back (⌘[)">←</button>
+            <button class="icon" id="btn-fwd" title="Forward (⌘])">→</button>
+            <button class="icon" id="btn-reload" title="Reload (⌘R)">↻</button>
+          </div>
+        </div>
+        <button id="urlbar" class="no-drag" title="⌘L"><span class="lock">⌕</span><span class="text">Search or enter URL</span><span class="blocked" title="Ads & trackers blocked on this page"></span></button>
+        <div id="favorites" class="fav-grid" data-zone="favorite"></div>
+        <div id="space-header">
+          <span class="space-icon"></span><span class="space-name"></span>
+          <button class="icon tiny" id="btn-space-menu" title="Space options">⋯</button>
+        </div>
+        <div class="scroll">
+          <div id="pinned" class="tablist" data-zone="pinned"></div>
+          <div class="divider"><span class="line"></span><button id="btn-clear" class="link" title="Archive all Today tabs">↓ Clear</button></div>
+          <button id="btn-newtab" class="newtab">＋ New Tab</button>
+          <div id="today" class="tablist" data-zone="today"></div>
+        </div>
+        <div id="media"></div>
+        <div id="downloads"></div>
+        <footer>
+          <button class="icon" id="btn-library" title="Library (⌘Y)">☰</button>
+          <div id="spaces"></div>
+          <button class="icon" id="btn-addspace" title="New space (⇧⌘N)">＋</button>
+          <span class="grow"></span>
+          <button class="icon" id="btn-shield" title="Ad blocker"></button>
+          <button class="icon claude-btn" id="btn-claude" title="Claude (⌘J)">✳</button>
+          <button class="icon" id="btn-settings" title="Settings (⌘,)">⚙</button>
+        </footer>
+      </aside>
+      <div id="sidebar-resizer"></div>
+      <div id="edge-hover"></div>
+
+      <main id="stage">
+        <div id="empty">
+          <div class="big-icon"></div>
+          <p>Press <kbd>⌘T</kbd> to open a tab, or <kbd>⌘J</kbd> to ask Claude.</p>
+        </div>
+        <div id="split-divider" title="Drag to resize · double-click to swap"></div>
+      </main>
+
+      <section id="claude">
+        <div id="claude-resizer"></div>
+        <header class="drag">
+          <span class="claude-title">✳ Claude</span>
+          <select id="claude-model" class="no-drag">
+            <option value="claude-opus-5-5">Opus 5.5</option>
+            <option value="claude-sonnet-5-5">Sonnet 5.5</option>
+            <option value="claude-haiku-5-5">Haiku 5.5</option>
+            <option value="claude-fable-5-2">Fable 5.2</option>
+          </select>
+          <button class="icon no-drag" id="claude-new" title="New chat">✎</button>
+          <button class="icon no-drag" id="claude-close" title="Close (⌘J)">✕</button>
+        </header>
+        <div id="claude-log"></div>
+        <div id="claude-composer">
+          <textarea id="claude-input" rows="2" placeholder="Ask about this page, or tell Claude what to do…"></textarea>
+          <div class="row">
+            <span id="claude-cost" title="Spend in this chat (estimate)"></span>
+            <span class="grow"></span>
+            <button id="claude-send" class="primary">Send ↵</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="overlay-root"></div>
+      <div id="toast"></div>
+      <div id="ctxmenu" class="menu hidden"></div>
+    </div>
+    <script src="ui.js"></script>
+  </body>
+</html>
