@@ -44,10 +44,11 @@ class Extensions {
         if (t) this.browser.closeTab(t.id);
       },
       createWindow: async (details) => {
-        // Extensions (password managers, etc.) open small windows; give them a Little Drift.
+        const url = (Array.isArray(details.url) ? details.url[0] : details.url) || 'about:blank';
+        // Extension UI (e.g. Bitwarden's "pop out") gets a clean window; web URLs get a Little Drift.
+        if (details.type === 'popup' || url.startsWith('chrome-extension://')) return this.extensionWindow(ses, url, details);
         const { openMini } = require('./mini');
-        const url = Array.isArray(details.url) ? details.url[0] : details.url;
-        return openMini(this.browser, url || 'about:blank', { width: details.width, height: details.height }).win;
+        return openMini(this.browser, url, { width: details.width, height: details.height }).win;
       },
       removeWindow: (win) => !win.isDestroyed() && win.close(),
       requestPermissions: async (extension, perms) => {
@@ -89,6 +90,24 @@ class Extensions {
 
     this.bySession.set(ses, { crx, ready });
     return ready;
+  }
+
+  extensionWindow(ses, url, details = {}) {
+    const { BrowserWindow } = require('electron');
+    const win = new BrowserWindow({
+      width: details.width || 420,
+      height: details.height || 640,
+      x: details.left,
+      y: details.top,
+      title: 'Extension',
+      autoHideMenuBar: true,
+      webPreferences: { session: ses, sandbox: true, contextIsolation: true },
+    });
+    const crx = this.bySession.get(ses)?.crx;
+    if (crx) crx.addTab(win.webContents, win);
+    win.on('closed', () => {});
+    win.loadURL(url).catch(() => {});
+    return win;
   }
 
   ready(ses) {
@@ -157,6 +176,17 @@ class Extensions {
     return this.browser.getSession(this.browser.space().profile || 'default');
   }
 
+  recommended() {
+    const installed = new Set(this.primary().extensions.getAllExtensions().map((e) => e.id));
+    return RECOMMENDED.map((r) => ({ ...r, installed: installed.has(r.id) }));
+  }
+
+  /** Id of the installed password manager (for ⇧⌘L), if any. */
+  passwordManagerId() {
+    const all = this.primary().extensions.getAllExtensions();
+    return (all.find((e) => PASSWORD_MANAGERS.has(e.id)) || {}).id || null;
+  }
+
   list() {
     const ses = this.primary();
     const unpacked = new Set(this.browser.settings.unpackedExtensions || []);
@@ -219,10 +249,25 @@ class Extensions {
   }
 }
 
+// Well-tested picks shown in Settings → Extensions. Password managers come first so
+// ⇧⌘L knows which popup to open.
+const RECOMMENDED = [
+  { id: 'nngceckbapebfimnlniiiahkandclblb', name: 'Bitwarden', blurb: 'Open-source password manager: autofill, passkeys, generator', passwordManager: true },
+  { id: 'eimadpbcbfnmbkopoojfekhnkhdbieeh', name: 'Dark Reader', blurb: 'Dark mode for every website' },
+  { id: 'bcjindcccaagfpapjjmafapmmgkkhgoa', name: 'JSON Formatter', blurb: 'Pretty-prints JSON responses' },
+];
+const PASSWORD_MANAGERS = new Set([
+  'nngceckbapebfimnlniiiahkandclblb', // Bitwarden
+  'aeblfdkhhhdcdjpifhhbdiojplfjncoa', // 1Password
+  'ghmbeldphafepmbegfdlkpapadhbakde', // Proton Pass
+  'hdokiejnpimakedhajhdlcegeplioahd', // LastPass
+  'fdjamakpfbbddfjaooikfcpapjohcfmg', // Dashlane
+]);
+
 /** Accepts a raw id or any Chrome Web Store URL containing one. */
 function parseExtensionId(input) {
   const m = String(input || '').match(/(?:^|\/)([a-p]{32})(?:[/?#]|$)/);
   return m ? m[1] : null;
 }
 
-module.exports = { Extensions, parseExtensionId };
+module.exports = { Extensions, parseExtensionId, RECOMMENDED, PASSWORD_MANAGERS };

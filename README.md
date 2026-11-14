@@ -55,6 +55,7 @@ Why this needed work even though Drift is Chromium: Electron includes Chromium's
 
 **Compatibility** (`npm run test:extensions` checks the core path):
 - ✅ Content scripts, service-worker messaging, `chrome.tabs`, `chrome.storage`, action icons and badges, popups, context menus.
+- ✅ **Bitwarden**: one-click install from Settings → Extensions. Its toolbar popup, pop-out window, login and autofill targeting the current tab all work. **⇧⌘L** opens your password manager.
 - ✅ **Dark Reader** and **JSON Formatter**, installed from the Web Store, both work. Dark Reader intentionally skips sites that already have their own dark mode.
 - ⚠️ Extensions that depend on `declarativeNetRequest` or other APIs Electron lacks may only partly work. Drift's built-in ad blocker covers the uBlock use case.
 

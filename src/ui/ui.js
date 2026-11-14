@@ -172,8 +172,21 @@ function render() {
   $('#claude-model').value = S.settings.claude.model;
   // Extension toolbar: actions for the active space's profile and active tab.
   $('#ext-bar').classList.toggle('hidden', !S.extensionCount);
-  const bal = $('#ext-bar browser-action-list');
-  if (bal.getAttribute('partition') !== S.partition) bal.setAttribute('partition', S.partition);
+  let bal = $('#ext-bar browser-action-list');
+  // <browser-action-list> subscribes to updates for its partition only when it is
+  // attached, so a partition change needs a fresh element (attributes set first).
+  // Also rebuild when the installed set changes (installs at startup can land
+  // before the element's subscription is live).
+  const balKey = `${S.partition}|${S.extensionCount}`;
+  if (bal.dataset.key !== balKey) {
+    const fresh = document.createElement('browser-action-list');
+    fresh.setAttribute('alignment', 'bottom right');
+    fresh.setAttribute('partition', S.partition);
+    fresh.dataset.key = balKey;
+    if (S.activeWcId != null) fresh.setAttribute('tab', String(S.activeWcId));
+    bal.replaceWith(fresh);
+    bal = fresh;
+  }
   if (S.activeWcId != null && bal.getAttribute('tab') !== String(S.activeWcId)) bal.setAttribute('tab', String(S.activeWcId));
 
   $('#empty').classList.toggle('hidden', !!S.activeTabId);
@@ -346,6 +359,7 @@ $('#btn-space-menu').onclick = (e) => spaceMenu(e, S.spaces.find((s) => s.id ===
 $('#btn-library').onclick = () => openLibrary();
 $('#btn-settings').onclick = () => openSettings();
 $('#btn-extensions').onclick = () => openSettings('extensions');
+$('#btn-ext-footer').onclick = () => openSettings('extensions');
 $('#btn-claude').onclick = () => toggleClaude();
 $('#btn-shield').onclick = () => act('adblock.set', { enabled: !S.settings.adblock }).then(() => toast(S.settings.adblock ? 'Ad blocker off' : 'Ad blocker on'));
 
@@ -421,6 +435,8 @@ const COMMANDS = () => {
     { t: 'Find in Page', k: '⌘F', run: openFind },
     { t: 'Boost this Site', k: '⇧⌘B', run: () => openBoost() },
     { t: 'Extensions', run: () => openSettings('extensions') },
+    { t: 'Password Manager (Bitwarden)', k: '⇧⌘L', run: () => openPasswordManager() },
+    { t: 'Install Bitwarden', run: () => act('ext.install', { input: 'nngceckbapebfimnlniiiahkandclblb' }).then(() => toast('Installed Bitwarden')).catch((e) => toast(String(e.message || e))) },
     { t: 'Chrome Web Store', run: () => act('ext.store') },
     { t: 'Library: History & Archive', k: '⌘Y', run: () => openLibrary() },
     { t: 'Claude API Usage', run: () => openLibrary('usage') },
@@ -751,6 +767,28 @@ function openSettings(initial) {
             h('button', { class: 'primary', onclick: () => (closeModal(), act('ext.store')) }, 'Open Chrome Web Store'),
             h('button', { class: 'secondary', onclick: () => act('ext.loadUnpacked').then((p) => p && (toast('Loaded unpacked extension'), modal && modal.show('extensions'))).catch((e) => toast(String(e.message || e))) }, 'Load unpacked…'))),
           field('Install by link or ID', h('div', { class: 'row' }, input, h('button', { class: 'secondary', onclick: install }, 'Install'))));
+        const rec = await act('ext.recommended');
+        const missing = rec.filter((r) => !r.installed);
+        if (missing.length) {
+          b.append(h('label', { style: 'font-weight:600;font-size:12px;display:block;margin:4px 0 6px' }, 'Recommended'));
+          for (const r of missing) {
+            b.append(h('div', { class: 'list-row' },
+              h('div', { class: 't', style: 'white-space:normal' }, h('b', {}, r.name), h('div', { class: 'help', style: 'font-size:12px;color:var(--fg-dim)' }, r.blurb + (r.passwordManager ? ' · ⇧⌘L opens it' : ''))),
+              h('button', { class: 'primary', onclick: async (e) => {
+                e.target.disabled = true;
+                e.target.textContent = 'Installing…';
+                try {
+                  await act('ext.install', { input: r.id });
+                  toast(`Installed ${r.name}`);
+                } catch (err) {
+                  toast(String(err.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''));
+                }
+                modal && modal.show('extensions');
+              } }, 'Install')));
+          }
+          b.append(h('div', { style: 'height:14px' }));
+        }
+        b.append(h('label', { style: 'font-weight:600;font-size:12px;display:block;margin:4px 0 6px' }, 'Installed'));
         if (!list.length) b.append(h('div', { class: 'help' }, 'No extensions yet.'));
         for (const x of list) {
           b.append(h('div', { class: 'list-row', style: 'align-items:flex-start' },
@@ -804,6 +842,21 @@ function openSettings(initial) {
       },
     },
   ], initial);
+}
+
+// ⇧⌘L: open the installed password manager's popup (Bitwarden shows matching
+// logins for the current site with a Fill button). Offer to install one if missing.
+async function openPasswordManager() {
+  const id = await act('ext.passwordManager');
+  if (!id) {
+    toast('No password manager yet — install Bitwarden from Settings → Extensions');
+    return openSettings('extensions');
+  }
+  const list = document.querySelector('#ext-bar browser-action-list');
+  const btn = list && list.shadowRoot.querySelector(`[id="${id}"]`);
+  const target = btn || (list && list.shadowRoot.querySelector('.action'));
+  if (target) target.click();
+  else toast('Password manager button not ready yet');
 }
 
 function defaultBrowserRow() {
@@ -1119,6 +1172,7 @@ window.drift.onCommand(({ name }) => {
     case 'settings': return openSettings();
     case 'boost': return openBoost();
     case 'extensions': return openSettings('extensions');
+    case 'password-manager': return openPasswordManager();
     case 'newspace': return newSpace();
     case 'claude-focus': return setTimeout(() => $('#claude-input').focus(), 30);
     case 'control-changed': return modal && modal.show('remote');

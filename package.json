@@ -1,6 +1,6 @@
 {
   "name": "drift-browser",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A sidebar-first, Claude-native browser in the spirit of Arc",
   "main": "src/main/index.js",
   "scripts": {

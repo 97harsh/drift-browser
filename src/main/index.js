@@ -49,6 +49,12 @@ app.on('second-instance', (_e, argv) => {
 });
 
 app.whenReady().then(async () => {
+  // In dev, show Drift's icon instead of Electron's.
+  if (!app.isPackaged && process.platform === 'darwin') {
+    try {
+      app.dock.setIcon(path.join(__dirname, '..', '..', 'build', 'icon.png'));
+    } catch {}
+  }
   const adblock = new AdBlock(app.getPath('userData'));
   const extensions = new Extensions(() => browser);
   browser = new Browser({ store, adblock, extensions });
@@ -230,6 +236,8 @@ ipcMain.handle('act', async (_e, action, p = {}) => {
       return control.info();
     // Chrome extensions
     case 'ext.list': return b.extensions.list();
+    case 'ext.recommended': return b.extensions.recommended();
+    case 'ext.passwordManager': return b.extensions.passwordManagerId();
     case 'ext.install': return b.extensions.installById(p.input);
     case 'ext.remove': return b.extensions.remove(p.id);
     case 'ext.loadUnpacked': return b.extensions.loadUnpackedFromDialog();
@@ -340,6 +348,7 @@ function buildMenu() {
         { label: 'Picture in Picture', accelerator: 'CmdOrCtrl+Shift+P', click: () => b.pip() },
         { label: 'Boost this Site…', accelerator: 'CmdOrCtrl+Shift+B', click: cmd('boost') },
         { label: 'Extensions…', click: cmd('extensions') },
+        { label: 'Password Manager', accelerator: 'CmdOrCtrl+Shift+L', click: cmd('password-manager') },
         { type: 'separator' },
         { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: () => b.wcOf(b.activeTabId())?.reload() },
         { label: 'Hard Reload', accelerator: 'CmdOrCtrl+Shift+R', click: () => b.wcOf(b.activeTabId())?.reloadIgnoringCache() },

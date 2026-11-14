@@ -21,7 +21,7 @@
         </div>
         <button id="urlbar" class="no-drag" title="⌘L"><span class="lock">⌕</span><span class="text">Search or enter URL</span><span class="blocked" title="Ads & trackers blocked on this page"></span></button>
         <div id="ext-bar" class="hidden">
-          <browser-action-list alignment="bottom right"></browser-action-list>
+          <browser-action-list alignment="bottom right" partition="persist:drift-default"></browser-action-list>
           <button class="icon tiny" id="btn-extensions" title="Manage extensions">⧉</button>
         </div>
         <div id="favorites" class="fav-grid" data-zone="favorite"></div>
@@ -42,6 +42,7 @@
           <div id="spaces"></div>
           <button class="icon" id="btn-addspace" title="New space (⇧⌘N)">＋</button>
           <span class="grow"></span>
+          <button class="icon" id="btn-ext-footer" title="Extensions">⧉</button>
           <button class="icon" id="btn-shield" title="Ad blocker"></button>
           <button class="icon claude-btn" id="btn-claude" title="Claude (⌘J)">✳</button>
           <button class="icon" id="btn-settings" title="Settings (⌘,)">⚙</button>
