@@ -2,14 +2,25 @@
 
 A sidebar-first, Claude-native browser in the spirit of Arc. Built on Chromium (via Electron 45 / Chromium 142).
 
-## Run it
+## Install (macOS)
+
+1. Download the DMG for your Mac from [Releases](https://github.com/97harsh/drift-browser/releases/latest):
+   - **Apple Silicon** (M1 and later): `Drift-<version>-arm64.dmg`
+   - **Intel**: `Drift-<version>-x64.dmg`
+2. Open it and drag **Drift** into **Applications**.
+3. The first time, **right-click Drift → Open → Open**. Drift isn't notarized by Apple yet, so macOS asks once. If macOS says the app "is damaged", run `xattr -dr com.apple.quarantine /Applications/Drift.app` and open it again.
+4. Optional: Settings (⌘,) → General → **Make Drift default**, then confirm in the macOS dialog.
+
+## Run from source
 
 ```bash
 npm install
 npm start
 ```
 
-Use a throwaway profile with `DRIFT_USER_DATA=/tmp/drift-dev npm start`. Run the tests with `npm test`.
+Use a throwaway profile with `DRIFT_USER_DATA=/tmp/drift-dev npm start`. Run the tests with `npm test` (plus `npm run test:extensions` for the Chrome-extension smoke test).
+
+To build the DMGs yourself, run `npm run dist`, which writes `dist/Drift-<version>-{arm64,x64}.dmg`. Builds are ad-hoc signed. For a notarized build, set `mac.identity` to your Developer ID and add `notarize` options in `package.json`.
 
 ## What's in it
 
@@ -115,6 +126,6 @@ Each tab is a `WebContentsView` inside a `BaseWindow`. The chrome UI is one tran
 ## Roadmap
 - Folders in pinned tabs; Notes/Easels; AI tab tidy and auto-rename
 - Broader Chrome extension API coverage (`declarativeNetRequest`, `chrome.commands` shortcuts); password-manager integration
-- Signed, notarized `.app` with a default-browser prompt (`npm run dist` builds an unsigned one)
+- Developer ID signing and notarization, so the DMG opens with no Gatekeeper prompt; auto-update
 - Persist split view across restarts; tab groups in split (3–4 panes)
 - Sync across devices

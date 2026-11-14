@@ -36,6 +36,13 @@ app.on('open-url', (e, url) => {
   if (browser) openMini(browser, url);
   else pendingUrls.push(url);
 });
+// Opening .html files from Finder (Drift registers as a viewer for them when packaged).
+app.on('open-file', (e, file) => {
+  e.preventDefault();
+  const url = 'file://' + file;
+  if (browser) browser.createTab({ url });
+  else pendingUrls.push(url);
+});
 app.on('second-instance', (_e, argv) => {
   const url = argv.find((a) => /^https?:\/\//.test(a));
   if (browser) url ? openMini(browser, url) : browser.win.focus();
@@ -228,6 +235,14 @@ ipcMain.handle('act', async (_e, action, p = {}) => {
     case 'ext.loadUnpacked': return b.extensions.loadUnpackedFromDialog();
     case 'ext.options': return b.extensions.openOptions(p.id);
     case 'ext.store': return b.createTab({ url: 'https://chromewebstore.google.com/' }).id;
+    // Default browser. macOS shows its own confirmation dialog; nothing changes until the user accepts.
+    case 'defaultBrowser.get':
+      return { http: app.isDefaultProtocolClient('http'), https: app.isDefaultProtocolClient('https'), packaged: app.isPackaged };
+    case 'defaultBrowser.set':
+      if (!app.isPackaged) return { error: 'Install the packaged Drift.app (from the DMG) first — in dev mode this would register Electron instead of Drift.' };
+      app.setAsDefaultProtocolClient('http');
+      app.setAsDefaultProtocolClient('https');
+      return { requested: true };
     case 'mini.open': return void openMini(b, p.url);
     case 'openExternal': return shell.openExternal(p.url);
     case 'relaunch':

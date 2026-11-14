@@ -659,7 +659,9 @@ function openSettings(initial) {
           field('Archive Today tabs after', select(String(st().autoArchiveHours), [['12', '12 hours'], ['24', '24 hours'], ['168', '7 days'], ['720', '30 days'], ['0', 'Never']], (v) => set({ autoArchiveHours: Number(v) })),
             'Like Arc, unpinned tabs you haven’t touched get archived automatically. Find them in Library → Archive.'),
           field('Media', check('Automatically open Picture-in-Picture when you leave a tab with a playing video', st().autoPip, (v) => set({ autoPip: v }))),
-          field('Little Drift', h('div', { class: 'help' }, 'Press ⌥⌘N for a quick throwaway window. Links opened from other apps open there when Drift is your default browser (requires a packaged build: npm run dist).')),
+          field('Default browser', defaultBrowserRow(),
+            'Links you click in other apps (Mail, Slack, Notes…) open in a Little Drift window, like Arc. macOS will ask you to confirm the change.'),
+          field('Little Drift', h('div', { class: 'help' }, 'Press ⌥⌘N for a quick throwaway window. One click on “Open in Drift” turns it into a real tab.')),
         );
       },
     },
@@ -802,6 +804,24 @@ function openSettings(initial) {
       },
     },
   ], initial);
+}
+
+function defaultBrowserRow() {
+  const row = h('div', { class: 'row' }, h('span', { class: 'pill' }, 'checking…'));
+  const paint = async () => {
+    const st = await act('defaultBrowser.get');
+    const isDefault = st.http && st.https;
+    row.replaceChildren(
+      h('span', { class: `pill ${isDefault ? 'ok' : ''}` }, isDefault ? 'Drift is your default browser' : 'Drift is not your default browser'),
+      isDefault ? null : h('button', { class: 'primary', onclick: async () => {
+        const r = await act('defaultBrowser.set');
+        if (r && r.error) return toast(r.error);
+        toast('Confirm in the macOS dialog');
+        setTimeout(paint, 4000);
+      } }, 'Make Drift default'));
+  };
+  paint();
+  return row;
 }
 
 function openBoost(hostArg) {

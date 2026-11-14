@@ -7,8 +7,9 @@
     "start": "electron .",
     "dev": "electron . --inspect=5858",
     "test": "node --test test/",
-    "dist": "npx electron-builder --mac",
-    "test:extensions": "electron scripts/ext-smoke.js"
+    "dist": "electron-builder --mac",
+    "test:extensions": "electron scripts/ext-smoke.js",
+    "dist:arm64": "electron-builder --mac dmg --arm64"
   },
   "license": "UNLICENSED",
   "type": "commonjs",
@@ -22,29 +23,102 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "electron": "^45.3.2"
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0"
   },
   "productName": "Drift",
   "private": true,
   "build": {
     "appId": "dev.drift.browser",
     "productName": "Drift",
-    "files": [
-      "src/**",
-      "package.json",
-      "node_modules/**"
-    ],
-    "mac": {
-      "category": "public.app-category.productivity"
+    "copyright": "Copyright \u00a9 2026 Harsh Sharma",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
     },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!**/*.map",
+      "!**/*.md"
+    ],
     "protocols": [
       {
-        "name": "Web",
+        "name": "Web site URL",
         "schemes": [
           "http",
           "https"
         ]
       }
-    ]
+    ],
+    "fileAssociations": [
+      {
+        "ext": [
+          "html",
+          "htm",
+          "xhtml"
+        ],
+        "name": "HTML document",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "pdf"
+        ],
+        "name": "PDF document",
+        "role": "Viewer"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "identity": "-",
+      "hardenedRuntime": false,
+      "darkModeSupport": true,
+      "extendInfo": {
+        "NSCameraUsageDescription": "Websites you visit can ask to use your camera.",
+        "NSMicrophoneUsageDescription": "Websites you visit can ask to use your microphone.",
+        "NSLocationUsageDescription": "Websites you visit can ask for your location.",
+        "NSLocationWhenInUseUsageDescription": "Websites you visit can ask for your location.",
+        "NSCameraUseContinuityCameraDeviceType": true
+      }
+    },
+    "dmg": {
+      "title": "Drift ${version}",
+      "artifactName": "Drift-${version}-${arch}.dmg",
+      "contents": [
+        {
+          "x": 150,
+          "y": 200
+        },
+        {
+          "x": 450,
+          "y": 200,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 600,
+        "height": 400
+      }
+    }
+  },
+  "author": {
+    "name": "Harsh Sharma"
+  },
+  "homepage": "https://github.com/97harsh/drift-browser",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/97harsh/drift-browser.git"
   }
 }
