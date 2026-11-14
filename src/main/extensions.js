@@ -19,6 +19,27 @@ class Extensions {
     this.bySession = new Map(); // Session -> {crx, ready: Promise}
     this.disabled = new Set();
     ElectronChromeExtensions.handleCRXProtocol(electronSession.defaultSession); // toolbar icons in the UI view
+    this.workers = new WeakSet();
+  }
+
+  /** Returns {reason:'install'} / {reason:'update', previousVersion} once per profile+version, else null. */
+  lifecycle(ses, scope) {
+    const b = this.browser;
+    if (!b) return null;
+    // Identify the extension from the worker's own registration scope.
+    const m = String(scope || '').match(/^chrome-extension:\/\/([a-p]{32})\//);
+    const extensionId = m && m[1];
+    const ext = extensionId && ses.extensions.getExtension(extensionId);
+    if (!ext) return null;
+    let profile = 'default';
+    for (const [name, s] of b.sessions) if (s === ses) profile = name;
+    const seen = (b.store.s.extensionVersions ||= {});
+    const mine = (seen[profile] ||= {});
+    const prev = mine[extensionId];
+    if (prev === ext.version) return null;
+    mine[extensionId] = ext.version;
+    b.store.save();
+    return prev ? { reason: 'update', previousVersion: prev } : { reason: 'install' };
   }
 
   get browser() {
@@ -87,6 +108,17 @@ class Extensions {
       this.browser && this.browser.emitState();
     });
     ses.extensions.on('extension-unloaded', () => this.browser && this.browser.emitState());
+
+    // Extension service workers ask (via preload/crx-shims.js) whether to fire
+    // chrome.runtime.onInstalled, since Electron never does. Worker IPC arrives on
+    // each worker's own ServiceWorkerMain.ipc, attached as it starts.
+    ses.serviceWorkers.on('running-status-changed', ({ runningStatus, versionId }) => {
+      if (runningStatus !== 'starting') return;
+      const sw = ses.serviceWorkers.getWorkerFromVersionID(versionId);
+      if (!sw || !String(sw.scope).startsWith('chrome-extension://') || this.workers.has(sw)) return;
+      this.workers.add(sw);
+      sw.ipc.handle('drift:crx-lifecycle', () => this.lifecycle(ses, sw.scope));
+    });
 
     this.bySession.set(ses, { crx, ready });
     return ready;
@@ -223,6 +255,9 @@ class Extensions {
       await uninstallExtension(id, { session: this.primary(), extensionsPath: this.dir }).catch(() => {});
     }
     for (const ses of this.bySession.keys()) if (ses.extensions.getExtension(id)) ses.extensions.removeExtension(id);
+    // A later reinstall should get a fresh onInstalled("install").
+    for (const versions of Object.values(this.browser.store.s.extensionVersions || {})) delete versions[id];
+    this.browser.store.save();
     this.browser.emitState();
   }
 

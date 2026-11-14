@@ -1,6 +1,8 @@
 // Headless-ish smoke test for Chrome extension support.
 // Usage: npx electron scripts/ext-smoke.js
-// 1) Loads a probe fixture and checks content script -> service worker -> chrome.tabs, plus our shims.
+// 1) Loads a probe fixture and checks what password managers rely on: content script <-> service
+//    worker messaging, chrome.tabs, scripting.executeScript into a frame, extension iframes in pages
+//    talking over ports, navigation events, and chrome.runtime.onInstalled (fired once, as 'install').
 // 2) Installs Dark Reader from the Chrome Web Store, checks it darkens a light page, then removes it.
 const { app } = require('electron');
 const os = require('os');
@@ -41,6 +43,11 @@ app.whenReady().then(async () => {
       if (results.probe && results.probe.startsWith('{')) break;
     }
     try { results.probe = JSON.parse(results.probe); } catch {}
+    await sleep(2500);
+    const extra = await pwc.executeJavaScript(`({ injected: document.documentElement.dataset.driftInjected || null, frame: document.documentElement.dataset.driftFrame || null, events: document.documentElement.dataset.driftEvents || null })`);
+    results.probeInjected = extra.injected;
+    try { results.probeFrame = JSON.parse(extra.frame); } catch { results.probeFrame = extra.frame; }
+    try { results.probeEvents = JSON.parse(extra.events); } catch { results.probeEvents = extra.events; }
 
     // 2) Real Chrome Web Store install.
     const r = await extensions.installById(`https://chromewebstore.google.com/detail/dark-reader/${DARK_READER}`);
@@ -67,6 +74,8 @@ app.whenReady().then(async () => {
   }
   console.log(JSON.stringify(results, null, 1));
   const ok = results.probe && results.probe.ok && results.probe.tabCount >= 1 && results.probe.url && results.probe.fontSettings === 'object' &&
+    results.probe.injected === 'ok' && results.probeInjected === 'yes' && results.probeFrame && results.probeFrame.echo === 'hello-from-frame' &&
+    results.probeEvents && Array.isArray(results.probeEvents.onInstalled) && results.probeEvents.onInstalled.join() === 'install' &&
     results.installed && results.contentScriptRan && results.extensionCountInState === 2 && results.removed;
   fs.rmSync(tmp, { recursive: true, force: true });
   app.exit(ok ? 0 : 1);
