@@ -1,8 +1,8 @@
 // Headless-ish smoke test for Chrome extension support.
 // Usage: npx electron scripts/ext-smoke.js
-// Installs Dark Reader from the Chrome Web Store into a temp profile, loads a page,
-// checks its content script ran and that it's visible to the toolbar, then removes it.
-const { app, nativeTheme } = require('electron');
+// 1) Loads a probe fixture and checks content script -> service worker -> chrome.tabs, plus our shims.
+// 2) Installs Dark Reader from the Chrome Web Store, checks it darkens a light page, then removes it.
+const { app } = require('electron');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
@@ -42,27 +42,22 @@ app.whenReady().then(async () => {
     }
     try { results.probe = JSON.parse(results.probe); } catch {}
 
-    // Collect extension service-worker logs for diagnostics.
-    results.swLogs = [];
-    ses.serviceWorkers.on('console-message', (_e, d) => results.swLogs.push(String(d.message || d).slice(0, 200)));
     // 2) Real Chrome Web Store install.
     const r = await extensions.installById(`https://chromewebstore.google.com/detail/dark-reader/${DARK_READER}`);
     results.installed = r.name;
     results.listed = extensions.list().map((x) => x.name);
 
-    // Dark Reader follows the system appearance by default; force dark so the effect is observable.
-    nativeTheme.themeSource = 'dark';
+    // Use a page with no native dark mode (Dark Reader skips sites that already have one).
     await sleep(1500);
-    const t = browser.createTab({ url: 'https://example.com' });
+    const t = browser.createTab({ url: 'https://news.ycombinator.com' });
     const wc = browser.wcOf(t.id);
     for (let i = 0; i < 40 && (wc.isLoading() || wc.getURL() === ''); i++) await sleep(250);
     for (let i = 0; i < 20 && !results.contentScriptRan; i++) {
       await sleep(500);
-      results.darkreaderNodes = await wc.executeJavaScript(`[...document.querySelectorAll('[class*="darkreader"], meta[name="darkreader"]')].map(e => e.tagName + '.' + e.className).slice(0, 5)`);
-      results.contentScriptRan = results.darkreaderNodes.length > 0;
+      results.darkreaderNodes = await wc.executeJavaScript(`document.querySelectorAll('style.darkreader').length`);
+      results.pageBackground = await wc.executeJavaScript(`getComputedStyle(document.body).backgroundColor`);
+      results.contentScriptRan = results.darkreaderNodes > 0;
     }
-    results.pageLogs = (browser.consoleLogs.get(wc.id) || []).map((l) => l.message.slice(0, 200)).slice(0, 8);
-    results.swRunning = extensions.primary().serviceWorkers ? Object.values(extensions.primary().serviceWorkers.getAllRunning()).map((w) => w.scope) : null;
     results.extensionCountInState = browser.serialize().extensionCount;
 
     await extensions.remove(DARK_READER);
@@ -71,8 +66,8 @@ app.whenReady().then(async () => {
     results.error = e.stack || String(e);
   }
   console.log(JSON.stringify(results, null, 1));
-  // Dark Reader's page effect is informational: it needs chrome.fontSettings, which Electron lacks.
-  const ok = results.probe && results.probe.ok && results.probe.tabCount >= 1 && results.probe.url && results.installed && results.extensionCountInState === 2 && results.removed;
+  const ok = results.probe && results.probe.ok && results.probe.tabCount >= 1 && results.probe.url && results.probe.fontSettings === 'object' &&
+    results.installed && results.contentScriptRan && results.extensionCountInState === 2 && results.removed;
   fs.rmSync(tmp, { recursive: true, force: true });
   app.exit(ok ? 0 : 1);
 });

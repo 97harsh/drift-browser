@@ -4,8 +4,17 @@
 const { contextBridge, webFrame } = require('electron');
 
 function installShims() {
-  const chrome = globalThis.chrome;
+  let chrome = globalThis.chrome;
   if (!chrome || !chrome.runtime || !chrome.runtime.id) return;
+  // electron-chrome-extensions freezes `chrome` after adding its APIs, which makes
+  // later additions silently fail. The global binding is still writable, so swap in
+  // an extensible copy carrying every existing API (descriptors and all).
+  if (Object.isFrozen(chrome)) {
+    const copy = Object.create(Object.getPrototypeOf(chrome));
+    Object.defineProperties(copy, Object.getOwnPropertyDescriptors(chrome));
+    globalThis.chrome = copy;
+    chrome = copy;
+  }
   // Callback-or-promise helper matching Chrome's dual API style.
   const value = (v) => (...args) => {
     const cb = args.find((a) => typeof a === 'function');

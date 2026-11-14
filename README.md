@@ -40,12 +40,11 @@ Open the **Chrome Web Store** inside Drift and click **Add to Chrome**, just lik
 - Extensions are shared across all spaces and profiles, auto-update every 5 hours, and add their items to the right-click menu.
 - Each install asks you to confirm and shows the requested permissions.
 
-Why this needed work even though Drift is Chromium: Electron includes Chromium's engine but not Chrome's browser layer. That layer is what provides Web Store installs, `chrome.tabs`, toolbar actions, popups and context menus. Drift adds them with [`electron-chrome-extensions`](https://github.com/samuelmaddock/electron-browser-shell) and `electron-chrome-web-store` (both MIT), plus its own shims for gaps such as `chrome.fontSettings`.
+Why this needed work even though Drift is Chromium: Electron includes Chromium's engine but not Chrome's browser layer. That layer is what provides Web Store installs, `chrome.tabs`, toolbar actions, popups and context menus. Drift adds them with [`electron-chrome-extensions`](https://github.com/samuelmaddock/electron-browser-shell) and `electron-chrome-web-store` (both MIT), plus its own shims for gaps such as `chrome.fontSettings` and `chrome.commands`.
 
 **Compatibility** (`npm run test:extensions` checks the core path):
 - ✅ Content scripts, service-worker messaging, `chrome.tabs`, `chrome.storage`, action icons and badges, popups, context menus.
-- ✅ **JSON Formatter**, installed from the Web Store, works fully.
-- ⚠️ **Dark Reader** installs and its worker runs, but it doesn't restyle pages yet.
+- ✅ **Dark Reader** and **JSON Formatter**, installed from the Web Store, both work. Dark Reader intentionally skips sites that already have their own dark mode.
 - ⚠️ Extensions that depend on `declarativeNetRequest` or other APIs Electron lacks may only partly work. Drift's built-in ad blocker covers the uBlock use case.
 
 ### Picture-in-picture
@@ -115,7 +114,7 @@ Each tab is a `WebContentsView` inside a `BaseWindow`. The chrome UI is one tran
 
 ## Roadmap
 - Folders in pinned tabs; Notes/Easels; AI tab tidy and auto-rename
-- Broader Chrome extension API coverage (Dark Reader page styling, `declarativeNetRequest`); password-manager integration
+- Broader Chrome extension API coverage (`declarativeNetRequest`, `chrome.commands` shortcuts); password-manager integration
 - Signed, notarized `.app` with a default-browser prompt (`npm run dist` builds an unsigned one)
 - Persist split view across restarts; tab groups in split (3–4 panes)
 - Sync across devices
