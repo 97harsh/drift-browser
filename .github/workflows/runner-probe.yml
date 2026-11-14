@@ -1,0 +1,37 @@
+# Measures what a free GitHub macOS runner actually offers, to size the Chromium build.
+name: runner-probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Hardware
+        run: |
+          echo "cpu: $(sysctl -n machdep.cpu.brand_string) x $(sysctl -n hw.ncpu)"
+          echo "ram_gb: $(( $(sysctl -n hw.memsize) / 1073741824 ))"
+          sysctl vm.swapusage
+          sw_vers
+      - name: Disk before cleanup
+        run: df -h / /System/Volumes/Data
+      - name: Xcode
+        run: |
+          ls -d /Applications/Xcode*.app
+          xcodebuild -version
+          xcrun --show-sdk-version
+      - name: Biggest removable things
+        run: |
+          sudo du -sh /Applications/Xcode*.app /Users/runner/Library/Android /usr/local/share/dotnet /Users/runner/hostedtoolcache /Library/Developer/CoreSimulator 2>/dev/null | sort -h | tail -15
+      - name: Free disk by removing extra Xcodes, simulators, Android, .NET
+        run: |
+          KEEP=$(xcode-select -p | sed 's#/Contents/Developer##')
+          for x in /Applications/Xcode*.app; do [ "$x" != "$KEEP" ] && sudo rm -rf "$x"; done
+          sudo rm -rf /Users/runner/Library/Android /usr/local/share/dotnet /Users/runner/hostedtoolcache/* ~/Library/Developer/CoreSimulator /Library/Developer/CoreSimulator/Profiles/Runtimes 2>/dev/null || true
+          xcrun simctl delete all 2>/dev/null || true
+          df -h / /System/Volumes/Data
+      - name: Network throughput (Chromium source tarball host)
+        run: |
+          curl -s -o /dev/null -w "speed_bytes_per_s=%{speed_download}\n" --max-time 30 -r 0-300000000 https://commondatastorage.googleapis.com/chromium-browser-official/chromium-142.0.7444.175.tar.xz || true
