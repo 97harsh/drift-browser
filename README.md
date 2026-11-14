@@ -129,3 +129,7 @@ Each tab is a `WebContentsView` inside a `BaseWindow`. The chrome UI is one tran
 - Developer ID signing and notarization, so the DMG opens with no Gatekeeper prompt; auto-update
 - Persist split view across restarts; tab groups in split (3–4 panes)
 - Sync across devices
+
+## License
+
+[MIT](LICENSE) © 2026 Harsh Sharma

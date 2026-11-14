@@ -11,7 +11,7 @@
     "test:extensions": "electron scripts/ext-smoke.js",
     "dist:arm64": "electron-builder --mac dmg --arm64"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
