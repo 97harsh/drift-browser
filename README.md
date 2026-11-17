@@ -1,5 +1,7 @@
 # Drift
 
+[![M8ven Score](https://m8ven.ai/badge/mcp/97harsh-drift-browser-1yind4?v=cf5d608f469f44bbe6df24744fbc7be3)](https://m8ven.ai/mcp/97harsh-drift-browser-1yind4?s=readme)
+
 A sidebar-first, Claude-native browser in the spirit of Arc. Built on Chromium (via Electron 45 / Chromium 142).
 
 ## Install (macOS)
